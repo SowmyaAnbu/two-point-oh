@@ -167,7 +167,8 @@
         }
         .result .km {
             font-family: 'Syne', sans-serif; font-weight: 800;
-            font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1; color: var(--accent);
+            font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1.05; color: var(--accent);
+            overflow-wrap: anywhere; word-break: break-word;
         }
         .result .km .unit { font-size: .42em; color: var(--text); margin-left: 6px; letter-spacing: 0; }
         .result .mi { color: var(--muted); margin-top: 8px; font-family: 'Space Mono', monospace; font-size: .9rem; }
@@ -219,11 +220,11 @@
                 <div class="field-row">
                     <div class="field">
                         <label for="lat1">Latitude</label>
-                        <input type="text" id="lat1" inputmode="decimal" value="47.5975024">
+                        <input type="text" id="lat1" inputmode="decimal" value="55.9485977">
                     </div>
                     <div class="field">
                         <label for="lon1">Longitude</label>
-                        <input type="text" id="lon1" inputmode="decimal" value="-122.3492781">
+                        <input type="text" id="lon1" inputmode="decimal" value="-3.2024938">
                     </div>
                 </div>
             </div>
@@ -233,11 +234,11 @@
                 <div class="field-row">
                     <div class="field">
                         <label for="lat2">Latitude</label>
-                        <input type="text" id="lat2" inputmode="decimal" value="40.7579787">
+                        <input type="text" id="lat2" inputmode="decimal" value="51.5079177">
                     </div>
                     <div class="field">
                         <label for="lon2">Longitude</label>
-                        <input type="text" id="lon2" inputmode="decimal" value="-73.9900326">
+                        <input type="text" id="lon2" inputmode="decimal" value="-0.0928882">
                     </div>
                 </div>
             </div>
@@ -309,12 +310,15 @@
 
     function showResult(body) {
         resultEl.classList.remove("error");
-        var km = parseFloat(body);
+        var text = String(body);
+        // Lambda may return a sentence like "Your result is 534.3425" - pull out the number
+        var match = text.match(/-?\d+(\.\d+)?/);
+        var km = match ? parseFloat(match[0]) : NaN;
         if (isFinite(km)) {
             kmEl.innerHTML = km.toFixed(2) + '<span class="unit">km</span>';
             miEl.textContent = "≈ " + (km * 0.621371).toFixed(2) + " miles";
         } else {
-            kmEl.textContent = body;
+            kmEl.textContent = text;
             miEl.textContent = "";
         }
         resultEl.classList.add("show");
@@ -382,7 +386,7 @@
     // Plot the prefilled example points on load so the map isn't empty
     window.addEventListener("load", function () {
         if (mapReady) {
-            plotPoints([47.5975024, -122.3492781], [40.7579787, -73.9900326]);
+            plotPoints([55.9485977, -3.2024938], [51.5079177, -0.0928882]);
         }
     });
 </script>
