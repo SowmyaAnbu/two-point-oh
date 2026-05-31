@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two Point Oh!</title>
+
+    <!-- Distinctive type + dark map tiles, both load fine on Amplify -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Manrope:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
+    <style>
+        :root {
+            --bg:        #1c1f21;
+            --bg-2:      #222629;
+            --card:      #2a2f33;
+            --card-edge: #353c41;
+            --accent:    #86C232;   /* lime - Point A */
+            --accent-b:  #E6B450;   /* amber - Point B */
+            --text:      #FFFFFF;
+            --muted:     #9aa0a6;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(900px 500px at 85% -10%, rgba(134,194,50,.10), transparent 60%),
+                radial-gradient(700px 500px at -5% 110%, rgba(230,180,80,.07), transparent 60%),
+                var(--bg);
+            color: var(--text);
+            font-family: 'Manrope', system-ui, sans-serif;
+            padding: 48px 24px 64px;
+        }
+
+        .wrap { max-width: 1120px; margin: 0 auto; }
+
+        /* ---------- Header / logo ---------- */
+        header { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+
+        .logo { flex: none; width: 64px; height: 44px; }
+        .logo .link { stroke: var(--accent); stroke-width: 2.5; stroke-dasharray: 4 5; stroke-linecap: round; fill: none; }
+        .logo .arc  { stroke: rgba(134,194,50,.35); stroke-width: 2; fill: none; }
+        .logo .pa { fill: var(--accent); }
+        .logo .pb { fill: var(--accent-b); }
+        .logo .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 2.4s ease-in-out infinite; }
+        .logo .pb.pulse { animation-delay: 1.2s; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+
+        h1 {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: clamp(2rem, 5vw, 3rem);
+            letter-spacing: -0.02em;
+            margin: 0;
+            line-height: 1;
+        }
+        h1 .oh { color: var(--accent); }
+
+        .lede {
+            color: var(--muted);
+            max-width: 640px;
+            margin: 14px 0 36px;
+            font-size: 1.02rem;
+            line-height: 1.55;
+        }
+
+        /* ---------- Layout ---------- */
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 420px) 1fr;
+            gap: 22px;
+            align-items: start;
+        }
+        @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+        .panel {
+            background: linear-gradient(180deg, var(--card), var(--bg-2));
+            border: 1px solid var(--card-edge);
+            border-radius: 16px;
+            padding: 22px;
+        }
+
+        /* ---------- Point input blocks ---------- */
+        .point {
+            border-left: 3px solid var(--pc);
+            padding: 4px 0 4px 14px;
+            margin-bottom: 20px;
+        }
+        .point.a { --pc: var(--accent); }
+        .point.b { --pc: var(--accent-b); }
+
+        .point .tag {
+            display: inline-flex; align-items: center; gap: 8px;
+            font-family: 'Space Mono', monospace;
+            font-size: .8rem; font-weight: 700; letter-spacing: .12em;
+            color: var(--pc); text-transform: uppercase; margin-bottom: 12px;
+        }
+        .point .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--pc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pc) 22%, transparent); }
+
+        .field-row { display: flex; gap: 12px; }
+        .field { flex: 1; }
+        .field label {
+            display: block; color: var(--muted); font-size: .78rem;
+            font-weight: 600; letter-spacing: .04em; margin-bottom: 6px;
+        }
+        .field input {
+            width: 100%;
+            background: #15181a;
+            border: 1px solid var(--card-edge);
+            border-radius: 9px;
+            color: var(--text);
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            padding: 11px 12px;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .field input:focus {
+            outline: none;
+            border-color: var(--pc, var(--accent));
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--pc, var(--accent)) 25%, transparent);
+        }
+        .field input.invalid { border-color: #e2554f; box-shadow: 0 0 0 3px rgba(226,85,79,.22); }
+
+        /* ---------- Button ---------- */
+        button.calc {
+            width: 100%;
+            background: var(--accent);
+            border: none;
+            border-radius: 10px;
+            color: #16240a;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 1.05rem;
+            letter-spacing: .06em;
+            padding: 14px;
+            cursor: pointer;
+            transition: transform .08s ease, filter .15s ease;
+        }
+        button.calc:hover { filter: brightness(1.08); }
+        button.calc:active { transform: translateY(1px) scale(.995); }
+        button.calc:disabled { opacity: .6; cursor: progress; }
+
+        /* ---------- Result card ---------- */
+        .result {
+            margin-top: 18px;
+            border: 1px solid var(--card-edge);
+            border-radius: 14px;
+            background:
+                linear-gradient(180deg, rgba(134,194,50,.10), transparent 70%),
+                var(--bg-2);
+            padding: 20px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity .35s ease, transform .35s ease;
+        }
+        .result.show { opacity: 1; transform: none; }
+        .result .rlabel {
+            font-family: 'Space Mono', monospace;
+            font-size: .76rem; letter-spacing: .16em; text-transform: uppercase;
+            color: var(--muted); margin-bottom: 8px;
+        }
+        .result .km {
+            font-family: 'Syne', sans-serif; font-weight: 800;
+            font-size: clamp(2.2rem, 7vw, 3.2rem); line-height: 1; color: var(--accent);
+        }
+        .result .km .unit { font-size: .42em; color: var(--text); margin-left: 6px; letter-spacing: 0; }
+        .result .mi { color: var(--muted); margin-top: 8px; font-family: 'Space Mono', monospace; font-size: .9rem; }
+        .result.error { background: linear-gradient(180deg, rgba(226,85,79,.12), transparent 70%), var(--bg-2); }
+        .result.error .km { color: #ef7a74; font-size: 1.1rem; font-family: 'Manrope', sans-serif; font-weight: 700; }
+        .result.error .mi { color: var(--muted); }
+
+        /* ---------- Map ---------- */
+        #map {
+            width: 100%;
+            height: 100%;
+            min-height: 460px;
+            border-radius: 16px;
+            border: 1px solid var(--card-edge);
+            background: #15181a;
+            z-index: 0;
+        }
+        .leaflet-container { background: #15181a; font-family: 'Manrope', sans-serif; }
+        .leaflet-control-attribution { background: rgba(20,22,24,.75) !important; color: #8a9095 !important; }
+        .leaflet-control-attribution a { color: var(--accent) !important; }
+        .pt-label {
+            font-family: 'Space Mono', monospace; font-weight: 700; font-size: 11px;
+            color: #15181a; padding: 1px 7px; border-radius: 5px; white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <svg class="logo" viewBox="0 0 64 44" aria-hidden="true">
+            <path class="arc" d="M14 30 Q 32 2 50 14"/>
+            <line class="link" x1="14" y1="30" x2="50" y2="14"/>
+            <circle class="pa pulse" cx="14" cy="30" r="6.5"/>
+            <circle class="pb pulse" cx="50" cy="14" r="6.5"/>
+        </svg>
+        <h1>TWO POINT <span class="oh">OH!</span></h1>
+    </header>
+
+    <p class="lede">
+        Enter the latitude and longitude in decimal degrees for two points, then hit
+        Calculate to plot them on the map and see the great-circle distance between them.
+    </p>
+
+    <div class="grid">
+        <!-- Controls + result -->
+        <div class="panel">
+            <div class="point a">
+                <div class="tag"><span class="dot"></span>Point A</div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="lat1">Latitude</label>
+                        <input type="text" id="lat1" inputmode="decimal" value="47.5975024">
+                    </div>
+                    <div class="field">
+                        <label for="lon1">Longitude</label>
+                        <input type="text" id="lon1" inputmode="decimal" value="-122.3492781">
+                    </div>
+                </div>
+            </div>
+
+            <div class="point b">
+                <div class="tag"><span class="dot"></span>Point B</div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="lat2">Latitude</label>
+                        <input type="text" id="lat2" inputmode="decimal" value="40.7579787">
+                    </div>
+                    <div class="field">
+                        <label for="lon2">Longitude</label>
+                        <input type="text" id="lon2" inputmode="decimal" value="-73.9900326">
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="calc" id="calcBtn">CALCULATE</button>
+
+            <!-- On-page result replaces the old alert() -->
+            <div class="result" id="result" aria-live="polite">
+                <div class="rlabel">Distance</div>
+                <div class="km" id="resultKm">—</div>
+                <div class="mi" id="resultMi"></div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div id="map"></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+    var API_URL = "https://ivhvrp533c.execute-api.us-east-1.amazonaws.com/dev";
+    var ACCENT = "#86C232", ACCENT_B = "#E6B450";
+
+    // ---- Map setup (dark tiles to match the UI) ----
+    var map, layerGroup, mapReady = false;
+    if (typeof L !== "undefined") {
+        map = L.map("map", { worldCopyJump: true }).setView([30, -80], 3);
+        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 19
+        }).addTo(map);
+        layerGroup = L.layerGroup().addTo(map);
+        mapReady = true;
+    }
+
+    function plotPoints(a, b) {
+        if (!mapReady) return;
+        layerGroup.clearLayers();
+
+        function marker(coord, color, name) {
+            L.circleMarker(coord, {
+                radius: 8, color: "#15181a", weight: 2,
+                fillColor: color, fillOpacity: 1
+            }).addTo(layerGroup);
+            L.marker(coord, {
+                icon: L.divIcon({
+                    className: "",
+                    html: '<div class="pt-label" style="background:' + color + '">' + name + '</div>',
+                    iconSize: null, iconAnchor: [-10, 8]
+                })
+            }).addTo(layerGroup);
+        }
+
+        marker(a, ACCENT, "A");
+        marker(b, ACCENT_B, "B");
+
+        L.polyline([a, b], {
+            color: ACCENT, weight: 3, opacity: .9, dashArray: "1 8", lineCap: "round"
+        }).addTo(layerGroup);
+
+        map.fitBounds(L.latLngBounds([a, b]).pad(0.35));
+    }
+
+    // ---- Result rendering (on page, not alert) ----
+    var resultEl = document.getElementById("result");
+    var kmEl = document.getElementById("resultKm");
+    var miEl = document.getElementById("resultMi");
+
+    function showResult(body) {
+        resultEl.classList.remove("error");
+        var km = parseFloat(body);
+        if (isFinite(km)) {
+            kmEl.innerHTML = km.toFixed(2) + '<span class="unit">km</span>';
+            miEl.textContent = "≈ " + (km * 0.621371).toFixed(2) + " miles";
+        } else {
+            kmEl.textContent = body;
+            miEl.textContent = "";
+        }
+        resultEl.classList.add("show");
+    }
+
+    function showError(msg) {
+        resultEl.classList.add("error", "show");
+        kmEl.textContent = msg;
+        miEl.textContent = "Tip: if you just enabled CORS, make sure you redeployed the API.";
+    }
+
+    // ---- Validation ----
+    function num(id, min, max) {
+        var el = document.getElementById(id);
+        var v = parseFloat(el.value);
+        var ok = isFinite(v) && v >= min && v <= max;
+        el.classList.toggle("invalid", !ok);
+        return ok ? v : null;
+    }
+
+    // ---- API call (kept POST + JSON body, output now on page) ----
+    var btn = document.getElementById("calcBtn");
+
+    function callAPI() {
+        var lat1 = num("lat1", -90, 90),  lon1 = num("lon1", -180, 180);
+        var lat2 = num("lat2", -90, 90),  lon2 = num("lon2", -180, 180);
+
+        if (lat1 === null || lon1 === null || lat2 === null || lon2 === null) {
+            showError("Please enter valid coordinates (lat -90..90, lon -180..180).");
+            return;
+        }
+
+        plotPoints([lat1, lon1], [lat2, lon2]);
+
+        btn.disabled = true;
+        var oldText = btn.textContent;
+        btn.textContent = "CALCULATING…";
+
+        var headers = new Headers();
+        headers.append("Content-Type", "application/json");
+        var raw = JSON.stringify({ lat1: lat1, lon1: lon1, lat2: lat2, lon2: lon2 });
+
+        fetch(API_URL, { method: "POST", headers: headers, body: raw, redirect: "follow" })
+            .then(function (r) { return r.text(); })
+            .then(function (result) {
+                var body;
+                try { body = JSON.parse(result).body; } catch (e) { body = result; }
+                showResult(body);
+            })
+            .catch(function (error) {
+                console.log("error", error);
+                showError("Couldn't reach the API.");
+            })
+            .finally(function () {
+                btn.disabled = false;
+                btn.textContent = oldText;
+            });
+    }
+
+    btn.addEventListener("click", callAPI);
+    document.querySelectorAll(".field input").forEach(function (el) {
+        el.addEventListener("keydown", function (e) { if (e.key === "Enter") callAPI(); });
+    });
+
+    // Plot the prefilled example points on load so the map isn't empty
+    window.addEventListener("load", function () {
+        if (mapReady) {
+            plotPoints([47.5975024, -122.3492781], [40.7579787, -73.9900326]);
+        }
+    });
+</script>
+</body>
+</html>
